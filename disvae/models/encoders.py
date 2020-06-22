@@ -42,6 +42,7 @@ class EncoderBurgess(nn.Module):
         # Layer parameters
         hid_channels = 32
         kernel_size = 4
+        kernel_porsche = 3
         hidden_dim = 256
         self.latent_dim = latent_dim
         self.img_size = img_size
@@ -58,6 +59,12 @@ class EncoderBurgess(nn.Module):
         # If input image is 64x64 do fourth convolution
         if self.img_size[1] == self.img_size[2] == 64:
             self.conv_64 = nn.Conv2d(hid_channels, hid_channels, kernel_size, **cnn_kwargs)
+        if self.img_size[1] == self.img_size[2] == 128:
+            self.conv_64 = nn.Conv2d(hid_channels, hid_channels, kernel_size, **cnn_kwargs)
+            self.conv_128 = nn.Conv2d(hid_channels, hid_channels, kernel_size, **cnn_kwargs)
+        if self.img_size[1] == 128 and self.img_size[2] == 107:
+            self.conv_128 = nn.Conv2d(hid_channels, hid_channels, kernel_size, **cnn_kwargs)
+            self.conv_64 = nn.Conv2d(hid_channels, hid_channels, (kernel_size, kernel_porsche), stride=(2, 2), padding=(1, 11))
 
         # Fully connected layers
         self.lin1 = nn.Linear(np.product(self.reshape), hidden_dim)
@@ -75,6 +82,10 @@ class EncoderBurgess(nn.Module):
         x = torch.relu(self.conv3(x))
         if self.img_size[1] == self.img_size[2] == 64:
             x = torch.relu(self.conv_64(x))
+        if self.img_size[1] == 128 or self.img_size[2] == 128:
+            x = torch.relu(self.conv_64(x))
+            x = torch.relu(self.conv_128(x))
+
 
         # Fully connected layers with ReLu activations
         x = x.view((batch_size, -1))

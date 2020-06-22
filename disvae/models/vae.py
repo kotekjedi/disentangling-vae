@@ -38,7 +38,7 @@ class VAE(nn.Module):
         """
         super(VAE, self).__init__()
 
-        if list(img_size[1:]) not in [[32, 32], [64, 64]]:
+        if list(img_size[1:]) not in [[32, 32], [64, 64], [128, 128], [128, 107]]:
             raise RuntimeError("{} sized images not supported. Only (None, 32, 32) and (None, 64, 64) supported. Build your own architecture or reshape images!".format(img_size))
 
         self.latent_dim = latent_dim

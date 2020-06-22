@@ -42,6 +42,7 @@ class DecoderBurgess(nn.Module):
         # Layer parameters
         hid_channels = 32
         kernel_size = 4
+        kernel_porsche = 3
         hidden_dim = 256
         self.img_size = img_size
         # Shape required to start transpose convs
@@ -59,6 +60,13 @@ class DecoderBurgess(nn.Module):
         # If input image is 64x64 do fourth convolution
         if self.img_size[1] == self.img_size[2] == 64:
             self.convT_64 = nn.ConvTranspose2d(hid_channels, hid_channels, kernel_size, **cnn_kwargs)
+        if self.img_size[1] == self.img_size[2] == 128:
+            self.convT_64 = nn.ConvTranspose2d(hid_channels, hid_channels, kernel_size, **cnn_kwargs)
+            self.convT_128 = nn.ConvTranspose2d(hid_channels, hid_channels, kernel_size, **cnn_kwargs)
+        if self.img_size[1] == 128 and self.img_size[2] == 107:
+            self.conv_64 = nn.ConvTranspose2d(hid_channels, hid_channels, kernel_size, **cnn_kwargs)
+            self.conv_128 = nn.ConvTranspose2d(hid_channels, hid_channels, (kernel_size, kernel_porsche), stride=(2, 2), padding=(1, 11))
+
 
         self.convT1 = nn.ConvTranspose2d(hid_channels, hid_channels, kernel_size, **cnn_kwargs)
         self.convT2 = nn.ConvTranspose2d(hid_channels, hid_channels, kernel_size, **cnn_kwargs)
@@ -76,6 +84,10 @@ class DecoderBurgess(nn.Module):
         # Convolutional layers with ReLu activations
         if self.img_size[1] == self.img_size[2] == 64:
             x = torch.relu(self.convT_64(x))
+        if self.img_size[1] == self.img_size[2] == 128:
+            x = torch.relu(self.convT_64(x))
+            x = torch.relu(self.convT_128(x))
+
         x = torch.relu(self.convT1(x))
         x = torch.relu(self.convT2(x))
         # Sigmoid activation for final conv layer
