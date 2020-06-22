@@ -22,7 +22,9 @@ DATASETS_DICT = {"mnist": "MNIST",
                  "fashion": "FashionMNIST",
                  "dsprites": "DSprites",
                  "celeba": "CelebA",
-                 "chairs": "Chairs"}
+                 "chairs": "Chairs",
+                "lambda" : "Lambda",
+                "porsche": "Porsche"}
 DATASETS = list(DATASETS_DICT.keys())
 
 
@@ -286,9 +288,8 @@ class CelebA(DisentangledDataset):
         # put each pixel in [0.,1.] and reshape to (C x H x W)
         img = self.transforms(img)
 
-        # no label so return 0 (note that can't return None because)
         # dataloaders requires so
-        return img, 0
+        return img, idx
 
 
 class Chairs(datasets.ImageFolder):
@@ -350,6 +351,40 @@ class Chairs(datasets.ImageFolder):
         preprocess(os.path.join(self.train_data, '*/*'),  # root/*/*/*.png structure
                    size=type(self).img_size[1:],
                    center_crop=(400, 400))
+
+
+class Lambda(Dataset):
+    files = {"train": "lambda"}
+    img_size = (1, 128, 128)
+    background_color = COLOUR_WHITE
+
+    def __init__(self, logger=logging.getLogger(__name__)):
+        self.labels = torch.from_numpy(np.load("data/lambda/lambda_target.npy"))
+        self.data = torch.from_numpy(np.load("data/lambda/lambda_train.npy"))
+        self.logger = logger
+
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, idx):
+        return self.data[idx], self.labels[idx]
+
+
+class Porsche(Dataset):
+    files = {"train": "porsche"}
+    img_size = (1, 128, 107)
+    background_color = COLOUR_BLACK
+
+    def __init__(self, logger=logging.getLogger(__name__)):
+        self.labels = torch.from_numpy(np.load("data/lambda/lambda_target.npy"))
+        self.data = torch.from_numpy(np.load("data/lambda/lambda_train.npy"))
+        self.logger = logger
+
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, idx):
+        return self.data[idx], self.labels[idx]
 
 
 class MNIST(datasets.MNIST):
