@@ -372,12 +372,13 @@ class Lambda(Dataset):
 
 class Porsche(Dataset):
     files = {"train": "porsche"}
-    img_size = (1, 128, 107)
+    img_size = (3, 128, 107)
     background_color = COLOUR_BLACK
 
     def __init__(self, logger=logging.getLogger(__name__)):
-        self.labels = torch.from_numpy(np.load("data/lambda/lambda_target.npy"))
-        self.data = torch.from_numpy(np.load("data/lambda/lambda_train.npy"))
+        self.labels = torch.from_numpy(np.load("data/porsche/porsche_target.npy"))
+        self.data = torch.from_numpy(np.load("data/porsche/porsche_train.npy"))
+
         self.logger = logger
 
     def __len__(self):

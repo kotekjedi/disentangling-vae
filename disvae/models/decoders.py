@@ -60,17 +60,20 @@ class DecoderBurgess(nn.Module):
         # If input image is 64x64 do fourth convolution
         if self.img_size[1] == self.img_size[2] == 64:
             self.convT_64 = nn.ConvTranspose2d(hid_channels, hid_channels, kernel_size, **cnn_kwargs)
-        if self.img_size[1] == self.img_size[2] == 128:
+        if self.img_size[1] == 128 or self.img_size[2] == 128:
             self.convT_64 = nn.ConvTranspose2d(hid_channels, hid_channels, kernel_size, **cnn_kwargs)
             self.convT_128 = nn.ConvTranspose2d(hid_channels, hid_channels, kernel_size, **cnn_kwargs)
-        if self.img_size[1] == 128 and self.img_size[2] == 107:
-            self.conv_64 = nn.ConvTranspose2d(hid_channels, hid_channels, kernel_size, **cnn_kwargs)
-            self.conv_128 = nn.ConvTranspose2d(hid_channels, hid_channels, (kernel_size, kernel_porsche), stride=(2, 2), padding=(1, 11))
+
 
 
         self.convT1 = nn.ConvTranspose2d(hid_channels, hid_channels, kernel_size, **cnn_kwargs)
         self.convT2 = nn.ConvTranspose2d(hid_channels, hid_channels, kernel_size, **cnn_kwargs)
-        self.convT3 = nn.ConvTranspose2d(hid_channels, n_chan, kernel_size, **cnn_kwargs)
+
+        if self.img_size[1] == 128 and self.img_size[2] == 107:
+            self.convT3 = nn.ConvTranspose2d(hid_channels, n_chan, (kernel_size, kernel_porsche),(2,2), (1,11))
+        else:
+            self.convT3 = nn.ConvTranspose2d(hid_channels, n_chan, kernel_size, **cnn_kwargs)
+
 
     def forward(self, z):
         batch_size = z.size(0)
@@ -84,7 +87,7 @@ class DecoderBurgess(nn.Module):
         # Convolutional layers with ReLu activations
         if self.img_size[1] == self.img_size[2] == 64:
             x = torch.relu(self.convT_64(x))
-        if self.img_size[1] == self.img_size[2] == 128:
+        if self.img_size[1] == 128 or self.img_size[2] == 128:
             x = torch.relu(self.convT_64(x))
             x = torch.relu(self.convT_128(x))
 

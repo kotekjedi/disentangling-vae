@@ -182,9 +182,10 @@ def main(args):
     logger.addHandler(stream)
 
     set_seed(args.seed)
-    device = get_device(is_gpu=not args.no_cuda)
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    print(device)
+    device = torch.device('cuda' if torch.cuda.is_available() and not args.no_cuda else 'cpu')
+    print()
+    print('ТЕКУЩИЙ ДЕВАЙС: ', device)
+    print()
 
     exp_dir = os.path.join(RES_DIR, args.name)
     logger.info("Root directory for saving and loading experiments: {}".format(exp_dir))

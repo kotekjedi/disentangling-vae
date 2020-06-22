@@ -52,19 +52,19 @@ class EncoderBurgess(nn.Module):
 
         # Convolutional layers
         cnn_kwargs = dict(stride=2, padding=1)
-        self.conv1 = nn.Conv2d(n_chan, hid_channels, kernel_size, **cnn_kwargs)
+        if self.img_size[1] == 128 and self.img_size[2] == 107:
+            self.conv1 = nn.Conv2d(n_chan, hid_channels, (kernel_size, kernel_porsche), stride=(2, 2), padding=(1, 11))
+        else:
+            self.conv1 = nn.Conv2d(n_chan, hid_channels, kernel_size, **cnn_kwargs)
         self.conv2 = nn.Conv2d(hid_channels, hid_channels, kernel_size, **cnn_kwargs)
         self.conv3 = nn.Conv2d(hid_channels, hid_channels, kernel_size, **cnn_kwargs)
 
         # If input image is 64x64 do fourth convolution
         if self.img_size[1] == self.img_size[2] == 64:
             self.conv_64 = nn.Conv2d(hid_channels, hid_channels, kernel_size, **cnn_kwargs)
-        if self.img_size[1] == self.img_size[2] == 128:
+        if self.img_size[1] == 128 or self.img_size[2] == 128:
             self.conv_64 = nn.Conv2d(hid_channels, hid_channels, kernel_size, **cnn_kwargs)
             self.conv_128 = nn.Conv2d(hid_channels, hid_channels, kernel_size, **cnn_kwargs)
-        if self.img_size[1] == 128 and self.img_size[2] == 107:
-            self.conv_128 = nn.Conv2d(hid_channels, hid_channels, kernel_size, **cnn_kwargs)
-            self.conv_64 = nn.Conv2d(hid_channels, hid_channels, (kernel_size, kernel_porsche), stride=(2, 2), padding=(1, 11))
 
         # Fully connected layers
         self.lin1 = nn.Linear(np.product(self.reshape), hidden_dim)
@@ -82,6 +82,7 @@ class EncoderBurgess(nn.Module):
         x = torch.relu(self.conv3(x))
         if self.img_size[1] == self.img_size[2] == 64:
             x = torch.relu(self.conv_64(x))
+
         if self.img_size[1] == 128 or self.img_size[2] == 128:
             x = torch.relu(self.conv_64(x))
             x = torch.relu(self.conv_128(x))
