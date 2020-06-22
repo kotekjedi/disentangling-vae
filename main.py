@@ -5,6 +5,8 @@ import os
 from configparser import ConfigParser
 
 from torch import optim
+import torch
+torch.cuda.current_device()
 
 from disvae import init_specific_model, Trainer, Evaluator
 from disvae.utils.modelIO import save_model, load_model, load_metadata
@@ -181,6 +183,9 @@ def main(args):
 
     set_seed(args.seed)
     device = get_device(is_gpu=not args.no_cuda)
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    print(device)
+
     exp_dir = os.path.join(RES_DIR, args.name)
     logger.info("Root directory for saving and loading experiments: {}".format(exp_dir))
 
