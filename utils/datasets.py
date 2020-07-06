@@ -48,6 +48,13 @@ def get_background(dataset):
     return get_dataset(dataset).background_color
 
 
+def get_objectives(dataset):
+    """Return the number of objectives Y (Conditions for X image)."""
+    try:
+        return get_dataset(dataset).objectives_amount
+    except AttributeError:
+        return 0
+
 def get_dataloaders(dataset, root=None, shuffle=True, pin_memory=True,
                     batch_size=128, logger=logging.getLogger(__name__), **kwargs):
     """A generic data loader
@@ -373,12 +380,12 @@ class Lambda(Dataset):
 class Porsche(Dataset):
     files = {"train": "porsche"}
     img_size = (3, 128, 107)
+    objectives_amount = 3
     background_color = COLOUR_BLACK
 
     def __init__(self, logger=logging.getLogger(__name__)):
         self.labels = torch.from_numpy(np.load("data/porsche/porsche_target.npy"))
         self.data = torch.from_numpy(np.load("data/porsche/porsche_train.npy"))
-
         self.logger = logger
 
     def __len__(self):

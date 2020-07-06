@@ -11,8 +11,8 @@ torch.cuda.current_device()
 from disvae import init_specific_model, Trainer, Evaluator
 from disvae.utils.modelIO import save_model, load_model, load_metadata
 from disvae.models.losses import LOSSES, RECON_DIST, get_loss_f
-from disvae.models.vae import MODELS
-from utils.datasets import get_dataloaders, get_img_size, DATASETS
+from disvae.models.vae import DECODERS, ENCODERS
+from utils.datasets import get_dataloaders, get_img_size, get_objectives, DATASETS
 from utils.helpers import (create_safe_directory, get_device, set_seed, get_n_param,
                            get_config_section, update_namespace_, FormatterNoDuplicate)
 from utils.visualize import GifTraversalsTraining
@@ -77,9 +77,13 @@ def parse_arguments(args_to_parse):
 
     # Model Options
     model = parser.add_argument_group('Model specfic options')
-    model.add_argument('-m', '--model-type',
-                       default=default_config['model'], choices=MODELS,
-                       help='Type of encoder and decoder to use.')
+    model.add_argument('-dec', '--decoder-type',
+                       default=default_config['decoder'], choices=DECODERS,
+                       help='Type of decoder to use.')
+
+    model.add_argument('-enc', '--encoder-type', default=default_config['encoder'], choices=ENCODERS,
+                       help='Type of encoder to use.')
+
     model.add_argument('-z', '--latent-dim', type=int,
                        default=default_config['latent_dim'],
                        help='Dimension of the latent variable.')
@@ -207,7 +211,10 @@ def main(args):
 
         # PREPARES MODEL
         args.img_size = get_img_size(args.dataset)  # stores for metadata
-        model = init_specific_model(args.model_type, args.img_size, args.latent_dim)
+
+        args.objectives = get_objectives(args.dataset)
+
+        model = init_specific_model(args.encoder_type, args.decoder_type, args.img_size, args.latent_dim, args.objectives)
         logger.info('Num parameters in model: {}'.format(get_n_param(model)))
 
         # TRAINS

@@ -9,20 +9,28 @@ from disvae.utils.initialization import weights_init
 from .encoders import get_encoder
 from .decoders import get_decoder
 
-MODELS = ["Burgess"]
+DECODERS = ["Burgess", "Objectives"]
+ENCODERS = ["Burgess", "Objectives"]
 
 
-def init_specific_model(model_type, img_size, latent_dim):
-    """Return an instance of a VAE with encoder and decoder from `model_type`."""
-    model_type = model_type.lower().capitalize()
-    if model_type not in MODELS:
-        err = "Unkown model_type={}. Possible values: {}"
-        raise ValueError(err.format(model_type, MODELS))
+def init_specific_model(encoder_type, decoder_type, img_size, latent_dim, objectives):
 
-    encoder = get_encoder(model_type)
-    decoder = get_decoder(model_type)
+    encoder_type = encoder_type.lower().capitalize()
+    decoder_type = decoder_type.lower().capitalize()
+
+    if encoder_type not in ENCODERS:
+        err = "Unkown encoder_type={}. Possible values: {}"
+        raise ValueError(err.format(encoder_type, ENCODERS))
+
+    if decoder_type not in DECODERS:
+        err = "Unkown decoder_type={}. Possible values: {}"
+        raise ValueError(err.format(encoder_type, DECODERS))
+
+    encoder = get_encoder(encoder_type)
+    decoder = get_decoder(decoder_type)
     model = VAE(img_size, encoder, decoder, latent_dim)
-    model.model_type = model_type  # store to help reloading
+    model.encoder_type = encoder_type  # store to help reloading
+    model.decoder_type = decoder_type
     return model
 
 
