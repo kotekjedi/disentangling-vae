@@ -15,7 +15,7 @@ def get_decoder(model_type):
 
 class DecoderBurgess(nn.Module):
     def __init__(self, img_size,
-                 latent_dim=10):
+                 latent_dim=10, objectives=None):
         r"""Decoder of the model proposed in [1].
 
         Parameters
@@ -89,9 +89,10 @@ class DecoderBurgess(nn.Module):
 
         return x
 
+
 class DecoderObjectives(nn.Module):
     def __init__(self, img_size,
-                 latent_dim=10):
+                 latent_dim=10, objectives=None):
         r"""Decoder of the model proposed in [1].
 
         Parameters
@@ -131,6 +132,8 @@ class DecoderObjectives(nn.Module):
         self.lin2 = nn.Linear(hidden_dim, hidden_dim)
         self.lin3 = nn.Linear(hidden_dim, np.product(self.reshape))
 
+        self.lin_objectives = nn.Linear(hidden_dim, objectives)
+
         # Convolutional layers
         cnn_kwargs = dict(stride=2, padding=1)
         # If input image is 64x64 do fourth convolution
@@ -151,6 +154,9 @@ class DecoderObjectives(nn.Module):
         # Fully connected layers with ReLu activations
         x = torch.relu(self.lin1(z))
         x = torch.relu(self.lin2(x))
+
+        objectives = self.lin_objectives(x)
+
         x = torch.relu(self.lin3(x))
         x = x.view(batch_size, *self.reshape)
 
@@ -164,4 +170,4 @@ class DecoderObjectives(nn.Module):
         # Sigmoid activation for final conv layer
         x = torch.sigmoid(self.convT3(x))
 
-        return x
+        return x, objectives

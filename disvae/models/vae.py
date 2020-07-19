@@ -28,14 +28,17 @@ def init_specific_model(encoder_type, decoder_type, img_size, latent_dim, object
 
     encoder = get_encoder(encoder_type)
     decoder = get_decoder(decoder_type)
-    model = VAE(img_size, encoder, decoder, latent_dim)
+    if objectives > 0:
+        model = VAE(img_size, encoder, decoder, latent_dim, objectives)
+    else:
+        model = VAE(img_size, encoder, decoder, latent_dim)
     model.encoder_type = encoder_type  # store to help reloading
     model.decoder_type = decoder_type
     return model
 
 
 class VAE(nn.Module):
-    def __init__(self, img_size, encoder, decoder, latent_dim):
+    def __init__(self, img_size, encoder, decoder, latent_dim, objectives=None):
         """
         Class which defines model and forward pass.
 
@@ -51,9 +54,10 @@ class VAE(nn.Module):
 
         self.latent_dim = latent_dim
         self.img_size = img_size
+        self.objectives = objectives
         self.num_pixels = self.img_size[1] * self.img_size[2]
-        self.encoder = encoder(img_size, self.latent_dim)
-        self.decoder = decoder(img_size, self.latent_dim)
+        self.encoder = encoder(self.img_size, self.latent_dim, self.self)
+        self.decoder = decoder(self.img_size, self.latent_dim, self.objectives)
 
         self.reset_parameters()
 
@@ -89,8 +93,9 @@ class VAE(nn.Module):
         """
         latent_dist = self.encoder(x)
         latent_sample = self.reparameterize(*latent_dist)
-        reconstruct = self.decoder(latent_sample)
-        return reconstruct, latent_dist, latent_sample
+        reconstruct, objectives = self.decoder(latent_sample)
+
+        return reconstruct, latent_dist, latent_sample, objectives
 
     def reset_parameters(self):
         self.apply(weights_init)

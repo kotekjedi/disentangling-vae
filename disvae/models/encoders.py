@@ -15,7 +15,7 @@ def get_encoder(model_type):
 
 class EncoderBurgess(nn.Module):
     def __init__(self, img_size,
-                 latent_dim=10):
+                 latent_dim=10, objectives=None):
         r"""Encoder of the model proposed in [1].
 
         Parameters
@@ -97,7 +97,7 @@ class EncoderBurgess(nn.Module):
 
 
 class EncoderObjectives(nn.Module):
-    def __init__(self, img_size, latent_dim=4):
+    def __init__(self, img_size, latent_dim=4, objectives=None):
         r"""Encoder of the model proposed in [1].
 
         Parameters
