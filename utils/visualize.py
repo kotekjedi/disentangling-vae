@@ -258,7 +258,10 @@ class Visualizer():
         n_latents = n_latents if n_latents is not None else self.model.latent_dim
         latent_samples = [self._traverse_line(dim, n_per_latent, data=data)
                           for dim in range(self.latent_dim)]
-        decoded_traversal, objectives = self._decode_latents(torch.cat(latent_samples, dim=0))
+        decoder_output = [self._decode_latents(torch.cat(latent_samples, dim=0))]
+
+        # Костыль для вывода objectives (второй аргумент в листе должен быть obj)
+        decoded_traversal = decoder_output[0]
 
         if is_reorder_latents:
             n_images, *other_shape = decoded_traversal.size()

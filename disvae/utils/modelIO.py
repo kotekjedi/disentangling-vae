@@ -32,7 +32,7 @@ def save_model(model, directory, metadata=None, filename=MODEL_FILENAME):
     if metadata is None:
         # save the minimum required for loading
         metadata = dict(img_size=model.img_size, latent_dim=model.latent_dim,
-                        model_type=model.model_type)
+                        encoder_type=model.encoder_type, decoder_type=model.decoder_type)
 
     save_metadata(metadata, directory)
 
@@ -97,10 +97,12 @@ def load_model(directory, is_gpu=True, filename=MODEL_FILENAME):
     metadata = load_metadata(directory)
     img_size = metadata["img_size"]
     latent_dim = metadata["latent_dim"]
-    model_type = metadata["model_type"]
+    encoder_type = metadata["encoder_type"]
+    decoder_type = metadata["encoder_type"]
+    objectives = metadata["objectives"]
 
     path_to_model = os.path.join(directory, filename)
-    model = _get_model(model_type, img_size, latent_dim, device, path_to_model)
+    model = _get_model(encoder_type, decoder_type, img_size, latent_dim, objectives, device, path_to_model)
     return model
 
 
@@ -127,13 +129,15 @@ def load_checkpoints(directory, is_gpu=True):
     return checkpoints
 
 
-def _get_model(model_type, img_size, latent_dim, device, path_to_model):
+def _get_model(encoder_type, decoder_type, img_size, latent_dim, objectives, device, path_to_model):
     """ Load a single model.
 
     Parameters
     ----------
-    model_type : str
-        The name of the model to load. For example Burgess.
+    encoder_type : str
+        The name of the encoder to load. For example Burgess.
+    decoder_type : str
+        The name of the decoder to load. For example Burgess
     img_size : tuple
         Tuple of the number of pixels in the image width and height.
         For example (32, 32) or (64, 64).
@@ -145,7 +149,7 @@ def _get_model(model_type, img_size, latent_dim, device, path_to_model):
     path_to_device : str
         Full path to the saved model on the device.
     """
-    model = init_specific_model(model_type, img_size, latent_dim).to(device)
+    model = init_specific_model(encoder_type, decoder_type, img_size, latent_dim, objectives).to(device)
     # works with state_dict to make it independent of the file structure
     model.load_state_dict(torch.load(path_to_model), strict=False)
     model.eval()

@@ -78,7 +78,7 @@ class EncoderBurgess(nn.Module):
         if self.img_size[1] == self.img_size[2] == 64:
             x = torch.relu(self.conv_64(x))
 
-        if self.img_size[1] == 128 or self.img_size[2] == 128:
+        if self.img_size[1] == self.img_size[2] == 128:
             x = torch.relu(self.conv_64(x))
             x = torch.relu(self.conv_128(x))
 

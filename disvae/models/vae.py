@@ -56,7 +56,7 @@ class VAE(nn.Module):
         self.img_size = img_size
         self.objectives = objectives
         self.num_pixels = self.img_size[1] * self.img_size[2]
-        self.encoder = encoder(self.img_size, self.latent_dim, self.self)
+        self.encoder = encoder(self.img_size, self.latent_dim, self.objectives)
         self.decoder = decoder(self.img_size, self.latent_dim, self.objectives)
 
         self.reset_parameters()
@@ -93,9 +93,9 @@ class VAE(nn.Module):
         """
         latent_dist = self.encoder(x)
         latent_sample = self.reparameterize(*latent_dist)
-        reconstruct, objectives = self.decoder(latent_sample)
+        reconstruct = self.decoder(latent_sample)
 
-        return reconstruct, latent_dist, latent_sample, objectives
+        return reconstruct, latent_dist, latent_sample
 
     def reset_parameters(self):
         self.apply(weights_init)

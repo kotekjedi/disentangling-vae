@@ -65,7 +65,6 @@ class DecoderBurgess(nn.Module):
         self.convT2 = nn.ConvTranspose2d(hid_channels, hid_channels, kernel_size, **cnn_kwargs)
         self.convT3 = nn.ConvTranspose2d(hid_channels, n_chan, kernel_size, **cnn_kwargs)
 
-
     def forward(self, z):
         batch_size = z.size(0)
 
@@ -78,7 +77,7 @@ class DecoderBurgess(nn.Module):
         # Convolutional layers with ReLu activations
         if self.img_size[1] == self.img_size[2] == 64:
             x = torch.relu(self.convT_64(x))
-        if self.img_size[1] == 128 or self.img_size[2] == 128:
+        if self.img_size[1] == 128 == self.img_size[2] == 128:
             x = torch.relu(self.convT_64(x))
             x = torch.relu(self.convT_128(x))
 
@@ -144,9 +143,7 @@ class DecoderObjectives(nn.Module):
         self.convT2 = nn.ConvTranspose2d(hid_channels, hid_channels, kernel_size, **cnn_kwargs)
 
         # Working only for 128*107
-        self.convT3 = nn.ConvTranspose2d(hid_channels, n_chan, (kernel_size, kernel_porsche), (2,2), (1,11))
-
-
+        self.convT3 = nn.ConvTranspose2d(hid_channels, n_chan, (kernel_size, kernel_porsche), (2, 2), (1, 11))
 
     def forward(self, z):
         batch_size = z.size(0)
@@ -170,4 +167,4 @@ class DecoderObjectives(nn.Module):
         # Sigmoid activation for final conv layer
         x = torch.sigmoid(self.convT3(x))
 
-        return x, objectives
+        return x
