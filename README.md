@@ -141,8 +141,7 @@ Evaluation specific options:
 Use `python main_viz.py <model-name> <plot_types> <param>` to plot using pretrained models. For example:
 
 ```
-python main_viz.py btcvae_celeba_mini gif-traversals reconstruct-
-                        traverse -c 7 -r 6 -t 2 --is-posterior
+python main_viz.py btcvae_celeba_mini gif-traversals reconstruct-traverse -c 7 -r 6 -t 2 --is-posterior
 ```
 
 This will save the plots in the model directory  `results/<model-name>/`. Generated plots for all experiments are found in their respective directories (created using `./bin/plot_all.sh`).
