@@ -124,8 +124,8 @@ class Trainer():
         kwargs = dict(desc="Epoch {}".format(epoch + 1), leave=False,
                       disable=not self.is_progress_bar)
         with trange(len(data_loader), **kwargs) as t:
-            for _, (data, _) in enumerate(data_loader):
-                iter_loss = self._train_iteration(data, storer)
+            for _, (data, target) in enumerate(data_loader):
+                iter_loss = self._train_iteration(data, storer, target=target)
                 epoch_loss += iter_loss
 
                 t.set_postfix(loss=iter_loss)
@@ -134,7 +134,7 @@ class Trainer():
         mean_epoch_loss = epoch_loss / len(data_loader)
         return mean_epoch_loss
 
-    def _train_iteration(self, data, storer):
+    def _train_iteration(self, data, storer, target=None):
         """
         Trains the model for one iteration on a batch of data.
 
@@ -147,13 +147,19 @@ class Trainer():
             Dictionary in which to store important variables for vizualisation.
         """
         # batch_size, channel, height, width = data.size()
-        # print(data.size())
         data = data.to(self.device)
-
+        if target is not None:
+            target = target.float().to(self.device)
         try:
-            recon_batch, latent_dist, latent_sample = self.model(data)
+            model_output = self.model(data)
+            if len(model_output) == 4:
+                recon_batch, latent_dist, latent_sample, objectives = self.model(data)
+            else:
+                recon_batch, latent_dist, latent_sample = self.model(data)
+                objectives = None
+
             loss = self.loss_f(data, recon_batch, latent_dist, self.model.training,
-                               storer, latent_sample=latent_sample)
+                               storer, latent_sample=latent_sample, objectives=objectives, target=target)
             self.optimizer.zero_grad()
             loss.backward()
             self.optimizer.step()

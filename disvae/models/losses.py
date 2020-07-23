@@ -13,7 +13,6 @@ from .discriminator import Discriminator
 from disvae.utils.math import (log_density_gaussian, log_importance_weight_matrix,
                                matrix_log_density_gaussian)
 
-
 LOSSES = ["VAE", "betaH", "betaB", "factor", "btcvae"]
 RECON_DIST = ["bernoulli", "laplace", "gaussian"]
 
@@ -59,7 +58,7 @@ class BaseLoss(abc.ABC):
         Every how many steps to recorsd the loss.
 
     rec_dist: {"bernoulli", "gaussian", "laplace"}, optional
-        Reconstruction distribution istribution of the likelihood on the each pixel.
+        Reconstruction distribution of the likelihood on the each pixel.
         Implicitely defines the reconstruction loss. Bernoulli corresponds to a
         binary cross entropy (bse), Gaussian corresponds to MSE, Laplace
         corresponds to L1.
@@ -147,6 +146,10 @@ class BetaHLoss(BaseLoss):
                       if is_train else 1)
         loss = rec_loss + anneal_reg * (self.beta * kl_loss)
 
+        if kwargs['objectives'] is not None:
+            mse_loss = _mse_objectives_loss(kwargs['objectives'], kwargs['target'], storer)
+            loss = loss + mse_loss
+
         if storer is not None:
             storer['loss'].append(loss.item())
 
@@ -195,6 +198,10 @@ class BetaBLoss(BaseLoss):
              if is_train else self.C_fin)
 
         loss = rec_loss + self.gamma * (kl_loss - C).abs()
+
+        if kwargs['objectives'] is not None:
+            mse_loss = _mse_objectives_loss(kwargs['objectives'], kwargs['target'], storer)
+            loss = loss + mse_loss
 
         if storer is not None:
             storer['loss'].append(loss.item())
@@ -298,7 +305,7 @@ class FactorKLoss(BaseLoss):
         # d_tc_loss = 0.5 * (self.bce(d_z.flatten(), ones) + self.bce(d_z_perm.flatten(), 1 - ones))
 
         # TO-DO: check ifshould also anneals discriminator if not becomes too good ???
-        #d_tc_loss = anneal_reg * d_tc_loss
+        # d_tc_loss = anneal_reg * d_tc_loss
 
         # Run discriminator optimizer
         self.optimizer_d.zero_grad()
@@ -352,7 +359,7 @@ class BtcvaeLoss(BaseLoss):
         self.is_mss = is_mss  # minibatch stratified sampling
 
     def __call__(self, data, recon_batch, latent_dist, is_train, storer,
-                 latent_sample=None):
+                 latent_sample=None, **kwargs):
         storer = self._pre_call(is_train, storer)
         batch_size, latent_dim = latent_sample.shape
 
@@ -385,6 +392,10 @@ class BtcvaeLoss(BaseLoss):
             storer['dw_kl_loss'].append(dw_kl_loss.item())
             # computing this for storing and comparaison purposes
             _ = _kl_normal_loss(*latent_dist, storer)
+
+            if kwargs['objectives'] is not None:
+                mse_loss = _mse_objectives_loss(kwargs['objectives'], kwargs['target'], storer)
+                loss = loss + mse_loss
 
         return loss
 
@@ -476,6 +487,14 @@ def _kl_normal_loss(mean, logvar, storer=None):
             storer['kl_loss_' + str(i)].append(latent_kl[i].item())
 
     return total_kl
+
+
+def _mse_objectives_loss(objectives, target, storer=None):
+    loss = torch.nn.MSELoss()
+    mse_loss = loss(objectives, target)
+    if storer is not None:
+        storer['mse_loss'].append(mse_loss.item())
+    return mse_loss
 
 
 def _permute_dims(latent_sample):

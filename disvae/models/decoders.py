@@ -167,4 +167,4 @@ class DecoderObjectives(nn.Module):
         # Sigmoid activation for final conv layer
         x = torch.sigmoid(self.convT3(x))
 
-        return x
+        return x, objectives

@@ -102,13 +102,20 @@ class Evaluator:
         data_loader: torch.utils.data.DataLoader
         """
         storer = defaultdict(list)
-        for data, _ in tqdm(dataloader, leave=False, disable=not self.is_progress_bar):
+        for data, target in tqdm(dataloader, leave=False, disable=not self.is_progress_bar):
             data = data.to(self.device)
+            target = target.to(self.device)
 
             try:
-                recon_batch, latent_dist, latent_sample = self.model(data)
+                model_output = self.model(data)
+                if len(model_output) == 4:
+                    recon_batch, latent_dist, latent_sample, objectives = self.model(data)
+                else:
+                    recon_batch, latent_dist, latent_sample = self.model(data)
+                    objectives = None
+
                 _ = self.loss_f(data, recon_batch, latent_dist, self.model.training,
-                                storer, latent_sample=latent_sample)
+                                storer, latent_sample=latent_sample, objectives=objectives, target=target)
             except ValueError:
                 # for losses that use multiple optimizers (e.g. Factor)
                 _ = self.loss_f.call_optimize(data, self.model, None, storer)

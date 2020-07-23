@@ -93,9 +93,9 @@ class VAE(nn.Module):
         """
         latent_dist = self.encoder(x)
         latent_sample = self.reparameterize(*latent_dist)
-        reconstruct = self.decoder(latent_sample)
+        reconstruct, objectives = self.decoder(latent_sample)
 
-        return reconstruct, latent_dist, latent_sample
+        return reconstruct, latent_dist, latent_sample, objectives
 
     def reset_parameters(self):
         self.apply(weights_init)
