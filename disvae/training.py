@@ -89,7 +89,7 @@ class Trainer():
             if self.gif_visualizer is not None:
                 self.gif_visualizer()
 
-            if epoch % checkpoint_every == 0:
+            if epoch % checkpoint_every == 10:
                 save_model(self.model, self.save_dir,
                            filename="model-{}.pt".format(epoch))
 
