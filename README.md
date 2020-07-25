@@ -8,6 +8,13 @@ This repository contains code (training / metrics / plotting) to investigate dis
 * **FactorVAE** from [Disentangling by Factorising](https://arxiv.org/abs/1802.05983)
 * **β-TCVAE** from [Isolating Sources of Disentanglement in Variational Autoencoders](https://arxiv.org/abs/1802.04942)
 
+Also to read:
+
+* **VAD** from [Variational Auto-Decoder](https://arxiv.org/abs/1903.00840)
+* **PRI-VAE** from [ Principle-of-Relevant-Information Variational Autoencoders](https://arxiv.org/abs/2007.06503)
+* **SVAE** from [Learning Invariances for Interpretability using Supervised VAE](https://arxiv.org/abs/2007.07591)
+
+
 Notes:
 - Tested for python >= 3.6
 - Tested for CPU and GPU
