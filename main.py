@@ -213,6 +213,8 @@ def main(args):
         args.img_size = get_img_size(args.dataset)  # stores for metadata
 
         args.objectives = get_objectives(args.dataset)
+        if args.decoder_type != "Objectives":
+            args.objectives = None
 
         model = init_specific_model(args.encoder_type, args.decoder_type, args.img_size, args.latent_dim, args.objectives)
         logger.info('Num parameters in model: {}'.format(get_n_param(model)))

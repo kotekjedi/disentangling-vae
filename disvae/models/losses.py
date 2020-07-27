@@ -350,12 +350,13 @@ class BtcvaeLoss(BaseLoss):
        autoencoders." Advances in Neural Information Processing Systems. 2018.
     """
 
-    def __init__(self, n_data, alpha=1., beta=6., gamma=1., is_mss=True, **kwargs):
+    def __init__(self, n_data, alpha=1., beta=6., gamma=1., mse_penalty=10., is_mss=True, **kwargs):
         super().__init__(**kwargs)
         self.n_data = n_data
         self.beta = beta
         self.alpha = alpha
         self.gamma = gamma
+        self.mse_penalty = mse_penalty
         self.is_mss = is_mss  # minibatch stratified sampling
 
     def __call__(self, data, recon_batch, latent_dist, is_train, storer,
@@ -385,6 +386,10 @@ class BtcvaeLoss(BaseLoss):
                            self.beta * tc_loss +
                            anneal_reg * self.gamma * dw_kl_loss)
 
+        if kwargs['objectives'] is not None:
+            mse_loss = _mse_objectives_loss(kwargs['objectives'], kwargs['target'], storer)
+            loss = loss + mse_loss
+
         if storer is not None:
             storer['loss'].append(loss.item())
             storer['mi_loss'].append(mi_loss.item())
@@ -393,9 +398,7 @@ class BtcvaeLoss(BaseLoss):
             # computing this for storing and comparaison purposes
             _ = _kl_normal_loss(*latent_dist, storer)
 
-            if kwargs['objectives'] is not None:
-                mse_loss = _mse_objectives_loss(kwargs['objectives'], kwargs['target'], storer)
-                loss = loss + mse_loss
+
 
         return loss
 
@@ -494,7 +497,7 @@ def _mse_objectives_loss(objectives, target, storer=None):
     mse_loss = loss(objectives, target)
     if storer is not None:
         storer['mse_loss'].append(mse_loss.item())
-    return mse_loss
+    return 4*mse_loss
 
 
 def _permute_dims(latent_sample):

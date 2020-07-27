@@ -160,7 +160,11 @@ class Visualizer():
             of latent distribution.
         """
         latent_samples = latent_samples.to(self.device)
-        return self.model.decoder(latent_samples)[0].cpu()
+        out = self.model.decoder(latent_samples)
+        if type(out) is tuple:
+            return out[0].cpu()
+        else:
+            return out.cpu()
 
     def generate_samples(self, size=(8, 8)):
         """Plot generated samples from the prior and decoding.
@@ -216,7 +220,7 @@ class Visualizer():
 
         with torch.no_grad():
             originals = data.to(self.device)[:n_samples, ...]
-            recs, _, _, _ = self.model(originals)
+            recs = self.model(originals)[0]
 
         originals = originals.cpu()
         recs = recs.view(-1, *self.model.img_size).cpu()

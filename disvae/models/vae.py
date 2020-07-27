@@ -28,7 +28,7 @@ def init_specific_model(encoder_type, decoder_type, img_size, latent_dim, object
 
     encoder = get_encoder(encoder_type)
     decoder = get_decoder(decoder_type)
-    if objectives > 0:
+    if not (objectives is None) and objectives > 0:
         model = VAE(img_size, encoder, decoder, latent_dim, objectives)
     else:
         model = VAE(img_size, encoder, decoder, latent_dim)
@@ -56,7 +56,7 @@ class VAE(nn.Module):
         self.img_size = img_size
         self.objectives = objectives
         self.num_pixels = self.img_size[1] * self.img_size[2]
-        self.encoder = encoder(self.img_size, self.latent_dim, self.objectives)
+        self.encoder = encoder(self.img_size, self.latent_dim)
         self.decoder = decoder(self.img_size, self.latent_dim, self.objectives)
 
         self.reset_parameters()
@@ -93,9 +93,12 @@ class VAE(nn.Module):
         """
         latent_dist = self.encoder(x)
         latent_sample = self.reparameterize(*latent_dist)
-        reconstruct, objectives = self.decoder(latent_sample)
-
-        return reconstruct, latent_dist, latent_sample, objectives
+        if self.objectives is not None:
+            reconstruct, objectives = self.decoder(latent_sample)
+            return reconstruct, latent_dist, latent_sample, objectives
+        else:
+            reconstruct = self.decoder(latent_sample)
+            return reconstruct, latent_dist, latent_sample
 
     def reset_parameters(self):
         self.apply(weights_init)
