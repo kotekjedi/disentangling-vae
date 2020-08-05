@@ -14,7 +14,7 @@ from disvae.models.losses import LOSSES, RECON_DIST, get_loss_f
 from disvae.models.vae import DECODERS, ENCODERS
 from utils.datasets import get_dataloaders, get_img_size, get_objectives, DATASETS
 from utils.helpers import (create_safe_directory, get_device, set_seed, get_n_param,
-                           get_config_section, update_namespace_, FormatterNoDuplicate)
+                           get_config_section, update_namespace_, FormatterNoDuplicate, check_bounds)
 from utils.visualize import GifTraversalsTraining
 
 
@@ -26,6 +26,7 @@ EXPERIMENTS = ADDITIONAL_EXP + ["{}_{}".format(loss, data)
                                 for loss in LOSSES
                                 for data in DATASETS]
 
+import main_viz
 
 def parse_arguments(args_to_parse):
     """Parse the command line arguments.
@@ -133,7 +134,7 @@ def parse_arguments(args_to_parse):
                         default=default_config['btcvae_B'],
                         help="Weight of the TC term (beta in the paper).")
 
-    # Learning options
+    # Evaluation options
     evaluation = parser.add_argument_group('Evaluation specific options')
     evaluation.add_argument('--is-eval-only', action='store_true',
                             default=default_config['is_eval_only'],
@@ -143,10 +144,32 @@ def parse_arguments(args_to_parse):
                             help="Whether to compute the disentangled metrcics. Currently only possible with `dsprites` as it is the only dataset with known true factors of variations.")
     evaluation.add_argument('--no-test', action='store_true',
                             default=default_config['no_test'],
-                            help="Whether not to compute the test losses.`")
-    evaluation.add_argument('--eval-batchsize', type=int,
-                            default=default_config['eval_batchsize'],
-                            help='Batch size for evaluation.')
+                            help="Whether not to compute the test losses.")
+
+    visualization = parser.add_argument_group('Visualization specific options')
+    visualization.add_argument('--viz', action='store_true',
+                            default=default_config['viz'],
+                            help="Visualization.")
+    visualization.add_argument('-c', '--n-cols', type=int, default=7,
+                               help='The number of columns to visualize (if applicable).')
+    visualization.add_argument('-t', '--max-traversal', default=2,
+                               type=lambda v: check_bounds(v, lb=0, is_inclusive=False,
+                                                           type=float, name="max-traversal"),
+                               help='The maximum displacement induced by a latent traversal. Symmetrical traversals are assumed. If `m>=0.5` then uses absolute value traversal, if `m<0.5` uses a percentage of the distribution (quantile). E.g. for the prior the distribution is a standard normal so `m=0.45` corresponds to an absolute value of `1.645` because `2m=90%%` of a standard normal is between `-1.645` and `1.645`. Note in the case of the posterior, the distribution is not standard normal anymore.')
+    visualization.add_argument('-i', '--idcs', type=int, nargs='+', default=[],
+                               help='List of indices to of images to put at the begining of the samples.')
+    visualization.add_argument('-u', '--upsample-factor', default=1,
+                               type=lambda v: check_bounds(v, lb=1, is_inclusive=True,
+                                                           type=int, name="upsample-factor"),
+                               help='The scale factor with which to upsample the image (if applicable).')
+    visualization.add_argument('--is-show-loss', action='store_true',
+                               help='Displays the loss on the figures (if applicable).')
+    visualization.add_argument('--is-posterior', action='store_true',
+                               help='Traverses the posterior instead of the prior.')
+
+    visualization.add_argument("--plots", type=str, nargs='+', default="all", choices=main_viz.PLOT_TYPES,
+                        help="List of all plots t o generate. `generate-samples`: random decoded samples. `data-samples` samples from the dataset. `reconstruct` first rnows//2 will be the original and rest will be the corresponding reconstructions. `traversals` traverses the most important rnows dimensions with ncols different samples from the prior or posterior. `reconstruct-traverse` first row for original, second are reconstructions, rest are traversals. `gif-traversals` grid of gifs where rows are latent dimensions, columns are examples, each gif shows posterior traversals. `all` runs every plot.")
+
 
     args = parser.parse_args(args_to_parse)
     if args.experiment != 'custom':
@@ -187,6 +210,7 @@ def main(args):
 
     set_seed(args.seed)
     device = torch.device('cuda' if torch.cuda.is_available() and not args.no_cuda else 'cpu')
+
     print()
     print('ТЕКУЩИЙ ДЕВАЙС: ', device)
     print()
@@ -246,13 +270,14 @@ def main(args):
         metadata = load_metadata(exp_dir)
         # TO-DO: currently uses train datatset
         test_loader = get_dataloaders(metadata["dataset"],
-                                      batch_size=args.eval_batchsize,
+                                      batch_size=args.batch_size,
                                       shuffle=False,
                                       logger=logger)
         loss_f = get_loss_f(args.loss,
                             n_data=len(test_loader.dataset),
                             device=device,
                             **vars(args))
+
         evaluator = Evaluator(model, loss_f,
                               device=device,
                               logger=logger,
@@ -261,6 +286,9 @@ def main(args):
 
         evaluator(test_loader, is_metrics=args.is_metrics, is_losses=not args.no_test)
 
+        if args.viz:
+            print("Зашло в if", args.plots)
+            main_viz.main(args)
 
 if __name__ == '__main__':
     args = parse_arguments(sys.argv[1:])

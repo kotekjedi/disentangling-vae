@@ -31,7 +31,7 @@ def parse_arguments(args_to_parse):
                         help="List of all plots to generate. `generate-samples`: random decoded samples. `data-samples` samples from the dataset. `reconstruct` first rnows//2 will be the original and rest will be the corresponding reconstructions. `traversals` traverses the most important rnows dimensions with ncols different samples from the prior or posterior. `reconstruct-traverse` first row for original, second are reconstructions, rest are traversals. `gif-traversals` grid of gifs where rows are latent dimensions, columns are examples, each gif shows posterior traversals. `all` runs every plot.")
     parser.add_argument('-s', '--seed', type=int, default=None,
                         help='Random seed. Can be `None` for stochastic behavior.')
-    parser.add_argument('-r', '--n-rows', type=int, default=6,
+    parser.add_argument('-z', '--latent-dim', type=int, default=4,
                         help='The number of rows to visualize (if applicable).')
     parser.add_argument('-c', '--n-cols', type=int, default=7,
                         help='The number of columns to visualize (if applicable).')
@@ -75,10 +75,11 @@ def main(args):
                      max_traversal=args.max_traversal,
                      loss_of_interest='kl_loss_',
                      upsample_factor=args.upsample_factor)
-    size = (args.n_rows, args.n_cols)
+    size = (args.latent_dim, args.n_cols)
     # same samples for all plots: sample max then take first `x`data  for all plots
-    num_samples = args.n_cols * args.n_rows
+    num_samples = args.n_cols * args.latent_dim
     samples = get_samples(dataset, num_samples, idcs=args.idcs)
+
 
     if "all" in args.plots:
         args.plots = [p for p in PLOT_TYPES if p != "all"]
@@ -93,16 +94,16 @@ def main(args):
         elif plot_type == 'traversals':
             viz.traversals(data=samples[0:1, ...] if args.is_posterior else None,
                            n_per_latent=args.n_cols,
-                           n_latents=args.n_rows,
+                           n_latents=args.latent_dim,
                            is_reorder_latents=True)
         elif plot_type == "reconstruct-traverse":
             viz.reconstruct_traverse(samples,
                                      is_posterior=args.is_posterior,
-                                     n_latents=args.n_rows,
+                                     n_latents=args.latent_dim,
                                      n_per_latent=args.n_cols,
                                      is_show_text=args.is_show_loss)
         elif plot_type == "gif-traversals":
-            viz.gif_traversals(samples[:args.n_cols, ...], n_latents=args.n_rows)
+            viz.gif_traversals(samples[:args.n_cols, ...], n_latents=args.latent_dim)
         else:
             raise ValueError("Unkown plot_type={}".format(plot_type))
 
