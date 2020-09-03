@@ -228,7 +228,7 @@ def main(args):
             args.epochs *= 2
 
         # PREPARES DATA
-        train_loader = get_dataloaders(args.dataset,
+        train_loader, test_loader = get_dataloaders(args.dataset,
                                        batch_size=args.batch_size,
                                        logger=logger)
         logger.info("Train {} with {} samples".format(args.dataset, len(train_loader.dataset)))
@@ -258,7 +258,7 @@ def main(args):
                           save_dir=exp_dir,
                           is_progress_bar=not args.no_progress_bar,
                           gif_visualizer=gif_visualizer)
-        trainer(train_loader,
+        trainer(train_loader, test_loader,
                 epochs=args.epochs,
                 checkpoint_every=args.checkpoint_every,)
 
@@ -269,7 +269,7 @@ def main(args):
         model = load_model(exp_dir, is_gpu=not args.no_cuda)
         metadata = load_metadata(exp_dir)
         # TO-DO: currently uses train datatset
-        test_loader = get_dataloaders(metadata["dataset"],
+        test_loader, _ = get_dataloaders(metadata["dataset"],
                                       batch_size=args.batch_size,
                                       shuffle=False,
                                       logger=logger)
@@ -287,8 +287,8 @@ def main(args):
         evaluator(test_loader, is_metrics=args.is_metrics, is_losses=not args.no_test)
 
         if args.viz:
-            print("Зашло в if", args.plots)
             main_viz.main(args)
+
 
 if __name__ == '__main__':
     args = parse_arguments(sys.argv[1:])

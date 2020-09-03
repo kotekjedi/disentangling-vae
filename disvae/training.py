@@ -14,7 +14,7 @@ from disvae.utils.modelIO import save_model
 TRAIN_LOSSES_LOGFILE = "train_losses.log"
 
 
-class Trainer():
+class Trainer:
     """
     Class to handle training of model.
 
@@ -43,12 +43,17 @@ class Trainer():
         Whether to use a progress bar for training.
     """
 
-    def __init__(self, model, optimizer, loss_f,
-                 device=torch.device("cpu"),
-                 logger=logging.getLogger(__name__),
-                 save_dir="results",
-                 gif_visualizer=None,
-                 is_progress_bar=True):
+    def __init__(
+        self,
+        model,
+        optimizer,
+        loss_f,
+        device=torch.device("cpu"),
+        logger=logging.getLogger(__name__),
+        save_dir="results",
+        gif_visualizer=None,
+        is_progress_bar=True,
+    ):
 
         self.device = device
         self.model = model.to(self.device)
@@ -61,9 +66,7 @@ class Trainer():
         self.gif_visualizer = gif_visualizer
         self.logger.info("Training Device: {}".format(self.device))
 
-    def __call__(self, data_loader,
-                 epochs=10,
-                 checkpoint_every=10):
+    def __call__(self, train_loader, test_loader, epochs=10, checkpoint_every=10):
         """
         Trains the model.
 
@@ -81,17 +84,20 @@ class Trainer():
         self.model.train()
         for epoch in range(epochs):
             storer = defaultdict(list)
-            mean_epoch_loss = self._train_epoch(data_loader, storer, epoch)
-            self.logger.info('Epoch: {} Average loss per image: {:.2f}'.format(epoch + 1,
-                                                                               mean_epoch_loss))
+            mean_epoch_loss = self._train_epoch(train_loader, storer, epoch)
+            mean_test_loss = self._train_epoch(test_loader, storer, epoch, eval=True)
+
+            self.logger.info(
+                "Epoch: {} TRAIN: {:.2f}, TEST: {:.2f}".format(epoch + 1, mean_epoch_loss, mean_test_loss)
+            )
+
             self.losses_logger.log(epoch, storer)
 
             if self.gif_visualizer is not None:
                 self.gif_visualizer()
 
             if epoch % checkpoint_every == 10:
-                save_model(self.model, self.save_dir,
-                           filename="model-{}.pt".format(epoch))
+                save_model(self.model, self.save_dir, filename="model-{}.pt".format(epoch))
 
         if self.gif_visualizer is not None:
             self.gif_visualizer.save_reset()
@@ -99,9 +105,9 @@ class Trainer():
         self.model.eval()
 
         delta_time = (default_timer() - start) / 60
-        self.logger.info('Finished training after {:.1f} min.'.format(delta_time))
+        self.logger.info("Finished training after {:.1f} min.".format(delta_time))
 
-    def _train_epoch(self, data_loader, storer, epoch):
+    def _train_epoch(self, data_loader, storer, epoch, eval=False):
         """
         Trains the model for one epoch.
 
@@ -120,12 +126,16 @@ class Trainer():
         mean_epoch_loss: float
             Mean loss per image
         """
-        epoch_loss = 0.
-        kwargs = dict(desc="Epoch {}".format(epoch + 1), leave=False,
-                      disable=not self.is_progress_bar)
+        epoch_loss = 0.0
+        kwargs = dict(
+            desc="Epoch {}".format(epoch + 1), leave=False, disable=not self.is_progress_bar
+        )
         with trange(len(data_loader), **kwargs) as t:
             for _, (data, target) in enumerate(data_loader):
-                iter_loss = self._train_iteration(data, storer, target=target)
+                if not eval:
+                    iter_loss = self._train_iteration(data, storer, target=target)
+                else:
+                    iter_loss = self._test_iteration(data, storer, target=target)
                 epoch_loss += iter_loss
 
                 t.set_postfix(loss=iter_loss)
@@ -158,11 +168,60 @@ class Trainer():
                 recon_batch, latent_dist, latent_sample = self.model(data)
                 objectives = None
 
-            loss = self.loss_f(data, recon_batch, latent_dist, self.model.training,
-                               storer, latent_sample=latent_sample, objectives=objectives, target=target)
+            loss = self.loss_f(
+                data,
+                recon_batch,
+                latent_dist,
+                self.model.training,
+                storer,
+                latent_sample=latent_sample,
+                objectives=objectives,
+                target=target,
+            )
             self.optimizer.zero_grad()
             loss.backward()
             self.optimizer.step()
+
+        except ValueError:
+            # for losses that use multiple optimizers (e.g. Factor)
+            loss = self.loss_f.call_optimize(data, self.model, self.optimizer, storer)
+
+        return loss.item()
+
+    def _test_iteration(self, data, storer, target=None):
+        """
+        Trains the model for one iteration on a batch of data.
+
+        Parameters
+        ----------
+        data: torch.Tensor
+            A batch of data. Shape : (batch_size, channel, height, width).
+
+        storer: dict
+            Dictionary in which to store important variables for vizualisation.
+        """
+        # batch_size, channel, height, width = data.size()
+        data = data.to(self.device)
+        if target is not None:
+            target = target.float().to(self.device)
+        try:
+            model_output = self.model(data)
+            if len(model_output) == 4:
+                recon_batch, latent_dist, latent_sample, objectives = self.model(data)
+            else:
+                recon_batch, latent_dist, latent_sample = self.model(data)
+                objectives = None
+
+            loss = self.loss_f(
+                data,
+                recon_batch,
+                latent_dist,
+                False,
+                storer,
+                latent_sample=latent_sample,
+                objectives=objectives,
+                target=target,
+            )
 
         except ValueError:
             # for losses that use multiple optimizers (e.g. Factor)

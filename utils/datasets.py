@@ -18,13 +18,16 @@ from torchvision import transforms, datasets
 DIR = os.path.abspath(os.path.dirname(__file__))
 COLOUR_BLACK = 0
 COLOUR_WHITE = 1
-DATASETS_DICT = {"mnist": "MNIST",
-                 "fashion": "FashionMNIST",
-                 "dsprites": "DSprites",
-                 "celeba": "CelebA",
-                 "chairs": "Chairs",
-                "lambda" : "Lambda",
-                "porsche": "Porsche"}
+DATASETS_DICT = {
+    "mnist": "MNIST",
+    "fashion": "FashionMNIST",
+    "dsprites": "DSprites",
+    "celeba": "CelebA",
+    "chairs": "Chairs",
+    "lambda": "Lambda",
+    "porsche": "Porsche",
+    "porsche_united": "Porsche_united",
+}
 
 DATASETS = list(DATASETS_DICT.keys())
 
@@ -56,8 +59,16 @@ def get_objectives(dataset):
     except AttributeError:
         return 0
 
-def get_dataloaders(dataset, root=None, shuffle=True, pin_memory=True,
-                    batch_size=128, logger=logging.getLogger(__name__), **kwargs):
+
+def get_dataloaders(
+    dataset,
+    root=None,
+    shuffle=True,
+    pin_memory=True,
+    batch_size=128,
+    logger=logging.getLogger(__name__),
+    **kwargs
+):
     """A generic data loader
 
     Parameters
@@ -74,11 +85,18 @@ def get_dataloaders(dataset, root=None, shuffle=True, pin_memory=True,
     pin_memory = pin_memory and torch.cuda.is_available  # only pin if GPU available
     Dataset = get_dataset(dataset)
     dataset = Dataset(logger=logger) if root is None else Dataset(root=root, logger=logger)
-    return DataLoader(dataset,
-                      batch_size=batch_size,
-                      shuffle=shuffle,
-                      pin_memory=pin_memory,
-                      **kwargs)
+
+    tr_sz = int(len(dataset) * 0.9)
+    train_dataset, test_dataset = torch.utils.data.random_split(
+        dataset, [tr_sz, len(dataset) - tr_sz], generator=torch.Generator().manual_seed(42)
+    )
+
+    return (
+        DataLoader(
+            train_dataset, batch_size=batch_size, shuffle=shuffle, pin_memory=pin_memory, **kwargs
+        ),
+        DataLoader(test_dataset, batch_size=batch_size, pin_memory=pin_memory,),
+    )
 
 
 class DisentangledDataset(Dataset, abc.ABC):
@@ -152,54 +170,148 @@ class DSprites(DisentangledDataset):
         on Learning Representations.
 
     """
-    urls = {"train": "https://github.com/deepmind/dsprites-dataset/blob/master/dsprites_ndarray_co1sh3sc6or40x32y32_64x64.npz?raw=true"}
+
+    urls = {
+        "train": "https://github.com/deepmind/dsprites-dataset/blob/master/dsprites_ndarray_co1sh3sc6or40x32y32_64x64.npz?raw=true"
+    }
     files = {"train": "dsprite_train.npz"}
-    lat_names = ('shape', 'scale', 'orientation', 'posX', 'posY')
+    lat_names = ("shape", "scale", "orientation", "posX", "posY")
     lat_sizes = np.array([3, 6, 40, 32, 32])
     img_size = (1, 64, 64)
     background_color = COLOUR_BLACK
-    lat_values = {'posX': np.array([0., 0.03225806, 0.06451613, 0.09677419, 0.12903226,
-                                    0.16129032, 0.19354839, 0.22580645, 0.25806452,
-                                    0.29032258, 0.32258065, 0.35483871, 0.38709677,
-                                    0.41935484, 0.4516129, 0.48387097, 0.51612903,
-                                    0.5483871, 0.58064516, 0.61290323, 0.64516129,
-                                    0.67741935, 0.70967742, 0.74193548, 0.77419355,
-                                    0.80645161, 0.83870968, 0.87096774, 0.90322581,
-                                    0.93548387, 0.96774194, 1.]),
-                  'posY': np.array([0., 0.03225806, 0.06451613, 0.09677419, 0.12903226,
-                                    0.16129032, 0.19354839, 0.22580645, 0.25806452,
-                                    0.29032258, 0.32258065, 0.35483871, 0.38709677,
-                                    0.41935484, 0.4516129, 0.48387097, 0.51612903,
-                                    0.5483871, 0.58064516, 0.61290323, 0.64516129,
-                                    0.67741935, 0.70967742, 0.74193548, 0.77419355,
-                                    0.80645161, 0.83870968, 0.87096774, 0.90322581,
-                                    0.93548387, 0.96774194, 1.]),
-                  'scale': np.array([0.5, 0.6, 0.7, 0.8, 0.9, 1.]),
-                  'orientation': np.array([0., 0.16110732, 0.32221463, 0.48332195,
-                                           0.64442926, 0.80553658, 0.96664389, 1.12775121,
-                                           1.28885852, 1.44996584, 1.61107316, 1.77218047,
-                                           1.93328779, 2.0943951, 2.25550242, 2.41660973,
-                                           2.57771705, 2.73882436, 2.89993168, 3.061039,
-                                           3.22214631, 3.38325363, 3.54436094, 3.70546826,
-                                           3.86657557, 4.02768289, 4.1887902, 4.34989752,
-                                           4.51100484, 4.67211215, 4.83321947, 4.99432678,
-                                           5.1554341, 5.31654141, 5.47764873, 5.63875604,
-                                           5.79986336, 5.96097068, 6.12207799, 6.28318531]),
-                  'shape': np.array([1., 2., 3.]),
-                  'color': np.array([1.])}
+    lat_values = {
+        "posX": np.array(
+            [
+                0.0,
+                0.03225806,
+                0.06451613,
+                0.09677419,
+                0.12903226,
+                0.16129032,
+                0.19354839,
+                0.22580645,
+                0.25806452,
+                0.29032258,
+                0.32258065,
+                0.35483871,
+                0.38709677,
+                0.41935484,
+                0.4516129,
+                0.48387097,
+                0.51612903,
+                0.5483871,
+                0.58064516,
+                0.61290323,
+                0.64516129,
+                0.67741935,
+                0.70967742,
+                0.74193548,
+                0.77419355,
+                0.80645161,
+                0.83870968,
+                0.87096774,
+                0.90322581,
+                0.93548387,
+                0.96774194,
+                1.0,
+            ]
+        ),
+        "posY": np.array(
+            [
+                0.0,
+                0.03225806,
+                0.06451613,
+                0.09677419,
+                0.12903226,
+                0.16129032,
+                0.19354839,
+                0.22580645,
+                0.25806452,
+                0.29032258,
+                0.32258065,
+                0.35483871,
+                0.38709677,
+                0.41935484,
+                0.4516129,
+                0.48387097,
+                0.51612903,
+                0.5483871,
+                0.58064516,
+                0.61290323,
+                0.64516129,
+                0.67741935,
+                0.70967742,
+                0.74193548,
+                0.77419355,
+                0.80645161,
+                0.83870968,
+                0.87096774,
+                0.90322581,
+                0.93548387,
+                0.96774194,
+                1.0,
+            ]
+        ),
+        "scale": np.array([0.5, 0.6, 0.7, 0.8, 0.9, 1.0]),
+        "orientation": np.array(
+            [
+                0.0,
+                0.16110732,
+                0.32221463,
+                0.48332195,
+                0.64442926,
+                0.80553658,
+                0.96664389,
+                1.12775121,
+                1.28885852,
+                1.44996584,
+                1.61107316,
+                1.77218047,
+                1.93328779,
+                2.0943951,
+                2.25550242,
+                2.41660973,
+                2.57771705,
+                2.73882436,
+                2.89993168,
+                3.061039,
+                3.22214631,
+                3.38325363,
+                3.54436094,
+                3.70546826,
+                3.86657557,
+                4.02768289,
+                4.1887902,
+                4.34989752,
+                4.51100484,
+                4.67211215,
+                4.83321947,
+                4.99432678,
+                5.1554341,
+                5.31654141,
+                5.47764873,
+                5.63875604,
+                5.79986336,
+                5.96097068,
+                6.12207799,
+                6.28318531,
+            ]
+        ),
+        "shape": np.array([1.0, 2.0, 3.0]),
+        "color": np.array([1.0]),
+    }
 
-    def __init__(self, root=os.path.join(DIR, '../data/dsprites/'), **kwargs):
+    def __init__(self, root=os.path.join(DIR, "../data/dsprites/"), **kwargs):
         super().__init__(root, [transforms.ToTensor()], **kwargs)
 
         dataset_zip = np.load(self.train_data)
-        self.imgs = dataset_zip['imgs']
-        self.lat_values = dataset_zip['latents_values']
+        self.imgs = dataset_zip["imgs"]
+        self.lat_values = dataset_zip["latents_values"]
 
     def download(self):
         """Download the dataset."""
         os.makedirs(self.root)
-        subprocess.check_call(["curl", "-L", type(self).urls["train"],
-                               "--output", self.train_data])
+        subprocess.check_call(["curl", "-L", type(self).urls["train"], "--output", self.train_data])
 
     def __getitem__(self, idx):
         """Get the image of `idx`
@@ -248,26 +360,27 @@ class CelebA(DisentangledDataset):
         on computer vision (pp. 3730-3738).
 
     """
+
     urls = {"train": "https://s3-us-west-1.amazonaws.com/udacity-dlnfd/datasets/celeba.zip"}
     files = {"train": "img_align_celeba"}
     img_size = (3, 64, 64)
     background_color = COLOUR_WHITE
 
-    def __init__(self, root=os.path.join(DIR, '../data/celeba'), **kwargs):
+    def __init__(self, root=os.path.join(DIR, "../data/celeba"), **kwargs):
         super().__init__(root, [transforms.ToTensor()], **kwargs)
 
-        self.imgs = glob.glob(self.train_data + '/*')
+        self.imgs = glob.glob(self.train_data + "/*")
 
     def download(self):
         """Download the dataset."""
-        save_path = os.path.join(self.root, 'celeba.zip')
+        save_path = os.path.join(self.root, "celeba.zip")
         os.makedirs(self.root)
-        subprocess.check_call(["curl", "-L", type(self).urls["train"],
-                               "--output", save_path])
+        subprocess.check_call(["curl", "-L", type(self).urls["train"], "--output", save_path])
 
-        hash_code = '00d2c5bc6d35e252742224ab0c1e8fcb'
-        assert hashlib.md5(open(save_path, 'rb').read()).hexdigest() == hash_code, \
-            '{} file is corrupted.  Remove the file and try again.'.format(save_path)
+        hash_code = "00d2c5bc6d35e252742224ab0c1e8fcb"
+        assert (
+            hashlib.md5(open(save_path, "rb").read()).hexdigest() == hash_code
+        ), "{} file is corrupted.  Remove the file and try again.".format(save_path)
 
         with zipfile.ZipFile(save_path) as zf:
             self.logger.info("Extracting CelebA ...")
@@ -320,17 +433,20 @@ class Chairs(datasets.ImageFolder):
         and pattern recognition (pp. 3762-3769).
 
     """
-    urls = {"train": "https://www.di.ens.fr/willow/research/seeing3Dchairs/data/rendered_chairs.tar"}
+
+    urls = {
+        "train": "https://www.di.ens.fr/willow/research/seeing3Dchairs/data/rendered_chairs.tar"
+    }
     files = {"train": "chairs_64"}
     img_size = (1, 64, 64)
     background_color = COLOUR_WHITE
 
-    def __init__(self, root=os.path.join(DIR, '../data/chairs'),
-                 logger=logging.getLogger(__name__)):
+    def __init__(
+        self, root=os.path.join(DIR, "../data/chairs"), logger=logging.getLogger(__name__)
+    ):
         self.root = root
         self.train_data = os.path.join(root, type(self).files["train"])
-        self.transforms = transforms.Compose([transforms.Grayscale(),
-                                              transforms.ToTensor()])
+        self.transforms = transforms.Compose([transforms.Grayscale(), transforms.ToTensor()])
         self.logger = logger
 
         if not os.path.isdir(root):
@@ -342,23 +458,24 @@ class Chairs(datasets.ImageFolder):
 
     def download(self):
         """Download the dataset."""
-        save_path = os.path.join(self.root, 'chairs.tar')
+        save_path = os.path.join(self.root, "chairs.tar")
         os.makedirs(self.root)
-        subprocess.check_call(["curl", type(self).urls["train"],
-                               "--output", save_path])
+        subprocess.check_call(["curl", type(self).urls["train"], "--output", save_path])
 
         self.logger.info("Extracting Chairs ...")
         tar = tarfile.open(save_path)
         tar.extractall(self.root)
         tar.close()
-        os.rename(os.path.join(self.root, 'rendered_chairs'), self.train_data)
+        os.rename(os.path.join(self.root, "rendered_chairs"), self.train_data)
 
         os.remove(save_path)
 
         self.logger.info("Preprocessing Chairs ...")
-        preprocess(os.path.join(self.train_data, '*/*'),  # root/*/*/*.png structure
-                   size=type(self).img_size[1:],
-                   center_crop=(400, 400))
+        preprocess(
+            os.path.join(self.train_data, "*/*"),  # root/*/*/*.png structure
+            size=type(self).img_size[1:],
+            center_crop=(400, 400),
+        )
 
 
 class Lambda(Dataset):
@@ -396,37 +513,55 @@ class Porsche(Dataset):
         return self.data[idx], self.labels[idx]
 
 
+class Porsche_united(Dataset):
+    files = {"train": "porsche_united"}
+    img_size = (3, 128, 107)
+    objectives_amount = 3
+    background_color = COLOUR_BLACK
+
+    def __init__(self, logger=logging.getLogger(__name__)):
+        self.labels = torch.from_numpy(np.load("data/porsche_united/porsche_target.npy"))
+        self.data = torch.from_numpy(np.load("data/porsche_united/porsche_train.npy"))
+        self.logger = logger
+
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, idx):
+        return self.data[idx], self.labels[idx]
+
+
 class MNIST(datasets.MNIST):
     """Mnist wrapper. Docs: `datasets.MNIST.`"""
+
     img_size = (1, 32, 32)
     background_color = COLOUR_BLACK
 
-    def __init__(self, root=os.path.join(DIR, '../data/mnist'), **kwargs):
-        super().__init__(root,
-                         train=True,
-                         download=True,
-                         transform=transforms.Compose([
-                             transforms.Resize(32),
-                             transforms.ToTensor()
-                         ]))
+    def __init__(self, root=os.path.join(DIR, "../data/mnist"), **kwargs):
+        super().__init__(
+            root,
+            train=True,
+            download=True,
+            transform=transforms.Compose([transforms.Resize(32), transforms.ToTensor()]),
+        )
 
 
 class FashionMNIST(datasets.FashionMNIST):
     """Fashion Mnist wrapper. Docs: `datasets.FashionMNIST.`"""
+
     img_size = (1, 32, 32)
 
-    def __init__(self, root=os.path.join(DIR, '../data/fashionMnist'), **kwargs):
-        super().__init__(root,
-                         train=True,
-                         download=True,
-                         transform=transforms.Compose([
-                             transforms.Resize(32),
-                             transforms.ToTensor()
-                         ]))
+    def __init__(self, root=os.path.join(DIR, "../data/fashionMnist"), **kwargs):
+        super().__init__(
+            root,
+            train=True,
+            download=True,
+            transform=transforms.Compose([transforms.Resize(32), transforms.ToTensor()]),
+        )
 
 
 # HELPERS
-def preprocess(root, size=(64, 64), img_format='JPEG', center_crop=None):
+def preprocess(root, size=(64, 64), img_format="JPEG", center_crop=None):
     """Preprocess a folder of images.
 
     Parameters
@@ -446,7 +581,7 @@ def preprocess(root, size=(64, 64), img_format='JPEG', center_crop=None):
     """
     imgs = []
     for ext in [".png", ".jpg", ".jpeg"]:
-        imgs += glob.glob(os.path.join(root, '*' + ext))
+        imgs += glob.glob(os.path.join(root, "*" + ext))
 
     for img_path in tqdm(imgs):
         img = Image.open(img_path)
